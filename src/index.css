@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Layout: 3-column operator shell — slate nav rail | scrolling stage on an 8pt grid | docked copilot.
+  Tokens are RGB channels so Tailwind can apply opacity (see tailwind.config.js).
+  Palette follows the spec: slate neutrals, brand blue #2563EB/#1E40AF, green #10B981, red #EF4444, amber #F59E0B.
+*/
+:root {
+  --bg: 241 245 249;          /* slate-100 page ground */
+  --surface: 255 255 255;     /* cards */
+  --surface-2: 248 250 252;   /* insets, table rows */
+  --line: 226 232 240;        /* slate-200 borders */
+  --fg: 15 23 42;             /* slate-900 */
+  --muted: 71 85 105;         /* slate-600 */
+  --subtle: 100 116 139;      /* slate-500 */
+  --brand: 37 99 235;         /* #2563EB */
+  --brand-strong: 30 64 175;  /* #1E40AF */
+  --brand-soft: 219 234 254;  /* blue-100 */
+  --ok: 5 150 105;            /* green, AA on white */
+  --warn: 217 119 6;          /* amber, darker for text contrast */
+  --bad: 220 38 38;           /* red */
+  --info: 37 99 235;
+  --cyan: 8 145 178;
+  --purple: 124 58 237;
+  --orange: 234 88 12;
+  --nav: 15 23 42;            /* sidebar is always slate-900 */
+  --nav-2: 30 41 59;
+  --nav-fg: 241 245 249;
+  --nav-muted: 148 163 184;
+  --amber: 245 158 11;        /* sidebar active rail */
+  --chart-grid: 226 232 240;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: 2 6 23;
+    --surface: 15 23 42;
+    --surface-2: 22 32 51;
+    --line: 39 51 72;
+    --fg: 241 245 249;
+    --muted: 176 189 207;
+    --subtle: 136 150 172;
+    --brand: 59 130 246;
+    --brand-strong: 147 180 253;
+    --brand-soft: 30 48 96;
+    --ok: 52 211 153;
+    --warn: 251 191 36;
+    --bad: 248 113 113;
+    --info: 96 165 250;
+    --cyan: 34 211 238;
+    --purple: 167 139 250;
+    --orange: 251 146 60;
+    --nav: 8 13 30;
+    --nav-2: 22 32 51;
+    --chart-grid: 39 51 72;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: 2 6 23;
+  --surface: 15 23 42;
+  --surface-2: 22 32 51;
+  --line: 39 51 72;
+  --fg: 241 245 249;
+  --muted: 176 189 207;
+  --subtle: 136 150 172;
+  --brand: 59 130 246;
+  --brand-strong: 147 180 253;
+  --brand-soft: 30 48 96;
+  --ok: 52 211 153;
+  --warn: 251 191 36;
+  --bad: 248 113 113;
+  --info: 96 165 250;
+  --cyan: 34 211 238;
+  --purple: 167 139 250;
+  --orange: 251 146 60;
+  --nav: 8 13 30;
+  --nav-2: 22 32 51;
+  --chart-grid: 39 51 72;
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  background: rgb(var(--bg));
+  color: rgb(var(--fg));
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+/* Paint the phone's top safe-area band so content never scrolls visibly under the host controls */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: rgb(var(--surface));
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+:focus-visible {
+  outline: 2px solid rgb(var(--brand));
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--line)) transparent;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Recharts tooltip + axis text read from the theme */
+.recharts-cartesian-axis-tick-value {
+  fill: rgb(var(--subtle));
+  font-size: 11px;
+}
+.recharts-cartesian-grid line {
+  stroke: rgb(var(--chart-grid));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
