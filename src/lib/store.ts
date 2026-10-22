@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import type { ChatMessage, ExceptionId, NavId, NodeKind, RoleId, StageId } from "./types";
 import * as mock from "./mock-data";
-import { api, API_URL, type DashboardData } from "./api";
+import { api, API_URL, ApiError, type DashboardData, type Me } from "./api";
+import { authEnabled } from "./supabase";
 
 export type CopilotMode = "docked" | "fullscreen" | "minimized" | "closed";
 export type MapLayer = NodeKind | "inTransit" | "atRisk";
@@ -21,7 +22,18 @@ const localData: DashboardData = {
   resolved: {},
 };
 
+/** disabled = no Supabase configured (open demo); otherwise the sign-in lifecycle */
+export type AuthStatus = "disabled" | "loading" | "signedOut" | "setPassword" | "noRole" | "signedIn";
+
 interface DashboardState {
+  authStatus: AuthStatus;
+  setAuthStatus: (s: AuthStatus) => void;
+  me: Me | null;
+  /** True when the signed-in user may act on this exception category. */
+  canAct: (category: ExceptionId) => boolean;
+  canSwitchView: () => boolean;
+  reset: () => void;
+
   data: DashboardData;
   apiStatus: ApiStatus;
   copilotSource: "claude" | "canned" | "local";
@@ -69,6 +81,20 @@ let msgSeq = 100;
 const localMsg = (from: "user" | "agent", blocks: ChatMessage["blocks"]): ChatMessage => ({ id: `l${++msgSeq}`, from, time: nowLabel(), blocks });
 
 export const useDashboard = create<DashboardState>((set, get) => ({
+  authStatus: authEnabled ? "loading" : "disabled",
+  setAuthStatus: (authStatus) => set({ authStatus }),
+  me: null,
+  canAct: (category) => {
+    const me = get().me;
+    if (!me) return !authEnabled; // open demo: everything allowed
+    return me.actionScope === "all" || me.actionScope.includes(category);
+  },
+  canSwitchView: () => {
+    const me = get().me;
+    return me ? me.canSwitchView : !authEnabled;
+  },
+  reset: () => set({ me: null, data: localData, resolved: {}, messages: mock.initialChat, role: "scm", apiStatus: API_URL ? "connecting" : "demo" }),
+
   data: localData,
   apiStatus: API_URL ? "connecting" : "demo",
   copilotSource: "local",
@@ -77,16 +103,32 @@ export const useDashboard = create<DashboardState>((set, get) => ({
   init: async () => {
     if (!API_URL) return;
     try {
+      const me = await api.me();
       const [data, chat] = await Promise.all([api.dashboard(), api.chat()]);
-      set({ data, resolved: data.resolved, messages: chat.messages, copilotSource: chat.copilot, apiStatus: "online" });
+      set({
+        me: me.auth ? me : null,
+        role: me.auth ? me.defaultView : get().role,
+        data,
+        resolved: data.resolved,
+        messages: chat.messages,
+        copilotSource: chat.copilot,
+        apiStatus: "online",
+        ...(authEnabled ? { authStatus: "signedIn" as const } : {}),
+      });
     } catch (e) {
+      if (e instanceof ApiError && e.code === "no_role") return set({ authStatus: "noRole", apiStatus: "online" });
+      if (e instanceof ApiError && e.status === 401) return set({ authStatus: "signedOut" });
       console.warn("Backend unreachable, using bundled demo data:", e);
-      set({ apiStatus: "demo" });
+      // Signed-in users still get the bundled data rather than a dead end.
+      set({ apiStatus: "demo", ...(authEnabled ? { authStatus: "signedIn" as const } : {}) });
     }
   },
 
   role: "scm",
-  setRole: (role) => set({ role, showAllExceptions: false, expandedException: null }),
+  setRole: (role) => {
+    if (!get().canSwitchView() && role !== get().role) return;
+    set({ role, showAllExceptions: false, expandedException: null });
+  },
 
   activeNav: "home",
   setNav: (activeNav) => set({ activeNav, mobileNavOpen: false }),
@@ -108,6 +150,8 @@ export const useDashboard = create<DashboardState>((set, get) => ({
   setShowAllExceptions: (showAllExceptions) => set({ showAllExceptions }),
   resolved: {},
   resolveOrder: (orderId, how) => {
+    const category = get().data.exceptionCategories.find((c) => c.orders.some((o) => o.orderId === orderId));
+    if (category && !get().canAct(category.id)) return;
     set((s) => ({ resolved: { ...s.resolved, [orderId]: how } }));
     if (get().apiStatus !== "online") return;
     api.setAction(orderId, how).catch(() => {

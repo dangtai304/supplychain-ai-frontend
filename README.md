@@ -43,6 +43,10 @@ src/
 - **Copilot**: docked ≥1280px, slide-over below; minimize, fullscreen, close. Quick actions, context chips, attachment and voice (Web Speech API where available). Replies come from `mockAgentReply()`.
 - **Ctrl/⌘ + K**: search pages, agents and order numbers; unmatched text goes to the copilot.
 
+## Sign-in
+
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (Vercel → Settings → Environment Variables) to require sign-in. Users are invited by an admin (see the backend README); invite and password-reset links land on a "set your password" screen. Each user's role decides their dashboard view, whether they can switch views, and which exceptions they can approve. Without these variables the app runs open in demo mode.
+
 ## Backend connection
 
 `src/lib/api.ts` reads `VITE_API_URL` (set in the Vercel project). On load the app fetches `/api/dashboard` and the chat history; approvals and copilot messages go to the API and persist in Postgres. The header badge shows **Live data** when connected, **Connecting** while Render's free instance wakes up (up to about a minute), and **Demo data** if the API is unreachable, in which case everything runs on `lib/mock-data.ts`.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Bell, Menu, Monitor, Moon, Sparkles, Sun } from "lucide-react";
+import { Bell, Lock, LogOut, Menu, Monitor, Moon, Sparkles, Sun } from "lucide-react";
 import { currentUser } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase";
 import { useDashboard } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { IconButton } from "@/components/ui/Button";
@@ -55,10 +56,81 @@ function LiveBadge({ status }: { status: "connecting" | "online" | "demo" }) {
   );
 }
 
+const roleNames: Record<string, string> = {
+  admin: "Administrator",
+  scm: "Supply Chain Manager",
+  inventory: "Inventory Planner",
+  procurement: "Procurement Manager",
+  logistics: "Logistics Manager",
+  oms: "OMS Manager",
+  finance: "Finance",
+  executive: "Executive",
+};
+
+function UserMenu() {
+  const me = useDashboard((s) => s.me);
+  const [open, setOpen] = useState(false);
+  const name = me?.email ? me.email.split("@")[0] : currentUser.firstName;
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: KeyboardEvent | MouseEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !(e.target as HTMLElement).closest("[data-user-menu]")) setOpen(false);
+    };
+    window.addEventListener("keydown", close);
+    window.addEventListener("mousedown", close);
+    return () => {
+      window.removeEventListener("keydown", close);
+      window.removeEventListener("mousedown", close);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative" data-user-menu>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Account: ${me?.email ?? name}`}
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-label uppercase text-brand-strong hover:ring-2 hover:ring-brand/30"
+      >
+        {name[0]}
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-10 z-40 w-64 animate-fade-up rounded-card border border-line bg-surface p-2 shadow-xl">
+          <div className="px-2 py-1.5">
+            <p className="truncate text-body font-semibold text-fg">{me?.email ?? "Demo user"}</p>
+            <p className="text-badge font-normal text-subtle">{me ? roleNames[me.role] : "Demo mode, no sign-in"}</p>
+          </div>
+          {me && (
+            <p className="mx-2 mb-1 rounded-btn bg-surface-2 px-2 py-1.5 text-badge font-normal text-muted">
+              {me.actionScope === "all" ? "Can act on every exception type." : me.actionScope.length === 0 ? "View only. Can't approve exceptions." : `Can act on ${me.actionScope.length} exception type${me.actionScope.length > 1 ? "s" : ""}.`}
+            </p>
+          )}
+          {supabase && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => void supabase!.auth.signOut()}
+              className="flex w-full items-center gap-2 rounded-btn px-2 py-2 text-left text-body text-fg hover:bg-surface-2"
+            >
+              <LogOut size={15} aria-hidden="true" /> Sign out
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Top command bar plus welcome banner and persona role switcher. */
 export function Header({ title }: { title: string }) {
-  const { role, setRole, setMobileNav, copilot, setCopilot, apiStatus } = useDashboard();
-  const roles = useDashboard((s) => s.data.roles);
+  const { role, setRole, setMobileNav, copilot, setCopilot, apiStatus, me } = useDashboard();
+  const canSwitch = useDashboard((s) => s.canSwitchView());
+  const allRoles = useDashboard((s) => s.data.roles);
+  const roles = canSwitch ? allRoles : allRoles.filter((r) => r.id === role);
+  const firstName = me?.email ? me.email.split("@")[0].split(/[._-]/)[0] : currentUser.firstName;
+  const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
   const stamp = useClock();
 
   return (
@@ -91,13 +163,7 @@ export function Header({ title }: { title: string }) {
               <Sparkles size={15} aria-hidden="true" /> Ask AI
             </button>
           )}
-          <span
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-label text-brand-strong"
-            title={currentUser.firstName}
-            aria-label={`Signed in as ${currentUser.firstName}`}
-          >
-            {currentUser.firstName[0]}
-          </span>
+          <UserMenu />
         </div>
       </div>
 
@@ -106,7 +172,7 @@ export function Header({ title }: { title: string }) {
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
           <div className="min-w-0">
             <h1 className="text-title text-fg" style={{ textWrap: "balance" }}>
-              Welcome back, {currentUser.firstName} 👋
+              Welcome back, {displayName} 👋
             </h1>
             <p className="text-body text-subtle">Your role-based AI agents are monitoring the entire supply chain and taking actions.</p>
           </div>
@@ -130,10 +196,12 @@ export function Header({ title }: { title: string }) {
                   active ? "border-brand bg-brand font-semibold text-white" : "border-line bg-surface text-muted hover:border-brand/50 hover:text-fg",
                 )}
               >
+                {!canSwitch && <Lock size={12} className="mr-1 inline -translate-y-px" aria-hidden="true" />}
                 {r.label}
               </button>
             );
           })}
+          {!canSwitch && <span className="self-center whitespace-nowrap text-badge font-normal text-subtle">Your role's view</span>}
         </div>
       </div>
     </>

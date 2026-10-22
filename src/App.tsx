@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { navGroups } from "@/lib/mock-data";
 import { useDashboard } from "@/lib/store";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -14,6 +14,7 @@ import { VolumeTrendChart } from "@/components/dashboard/VolumeTrendChart";
 import { AgentTray } from "@/components/dashboard/AgentTray";
 import { CopilotDrawer } from "@/components/dashboard/CopilotDrawer";
 import { ModulePlaceholder } from "@/components/dashboard/ModulePlaceholder";
+import { AuthGate } from "@/components/auth/AuthScreens";
 
 function HomeDashboard() {
   const roleId = useDashboard((s) => s.role);
@@ -41,11 +42,15 @@ function HomeDashboard() {
 }
 
 export default function App() {
+  return (
+    <AuthGate>
+      <Shell />
+    </AuthGate>
+  );
+}
+
+function Shell() {
   const activeNav = useDashboard((s) => s.activeNav);
-  const init = useDashboard((s) => s.init);
-  useEffect(() => {
-    void init();
-  }, [init]);
   const title = navGroups.flatMap((g) => g.items).find((i) => i.id === activeNav)?.label ?? "Home";
 
   return (

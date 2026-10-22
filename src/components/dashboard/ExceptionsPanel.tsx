@@ -1,4 +1,4 @@
-import { Bot, Check, ChevronDown, Sparkles, TriangleAlert } from "lucide-react";
+import { Bot, Check, ChevronDown, Lock, Sparkles, TriangleAlert } from "lucide-react";
 import type { ExceptionCategory, ExceptionId } from "@/lib/types";
 import { useDashboard } from "@/lib/store";
 import { cn, fmtMoney, toneBg, toneColor, toneSoft } from "@/lib/utils";
@@ -7,7 +7,7 @@ import { Card, CardHeader } from "@/components/ui/Card";
 
 /** AI-detected exceptions with expandable rows; each order can be approved or handed to its agent. */
 export function ExceptionsPanel({ categories, scope }: { categories: ExceptionCategory[]; scope: ExceptionId[] }) {
-  const { expandedException, toggleException, showAllExceptions, setShowAllExceptions, resolved, resolveOrder, setNav } = useDashboard();
+  const { expandedException, toggleException, showAllExceptions, setShowAllExceptions, resolved, resolveOrder, setNav, canAct } = useDashboard();
   const scoped = scope.length > 0 && !showAllExceptions;
   const visible = scoped ? categories.filter((c) => scope.includes(c.id)) : categories;
   const max = Math.max(...categories.map((c) => c.count));
@@ -74,7 +74,11 @@ export function ExceptionsPanel({ categories, scope }: { categories: ExceptionCa
                           {o.recommendation}
                         </p>
                         <div className="mt-2.5 flex flex-wrap gap-2">
-                          {state ? (
+                          {!state && !canAct(c.id) ? (
+                            <span className="inline-flex h-7 items-center gap-1 text-badge font-normal text-subtle">
+                              <Lock size={12} aria-hidden="true" /> View only for your role. {c.owner} or the owning team can act.
+                            </span>
+                          ) : state ? (
                             <span className="inline-flex h-7 items-center gap-1 rounded-btn bg-ok/10 px-2.5 text-label text-ok">
                               <Check size={14} aria-hidden="true" />
                               {state === "approved" ? "Approved, agent executing" : `Assigned to ${c.owner}`}
