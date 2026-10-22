@@ -2,7 +2,8 @@
 
 Control-tower dashboard built from the SDD spec: React 19 + TypeScript + Vite, Tailwind CSS (token-based light/dark theme), Recharts, Lucide icons, Zustand, and a d3-geo world map.
 
-Backend: [supplychain-ai-backend](https://github.com/dangtai304/supplychain-ai-backend) (Render). Frontend hosting: Vercel.
+**Live:** https://supplychain-ai-frontend.vercel.app  
+Backend: [supplychain-ai-backend](https://github.com/dangtai304/supplychain-ai-backend) on Render (https://supplychain-ai-backend-3884.onrender.com). Frontend hosting: Vercel, auto-deploys on push to `main`.
 
 ## Run
 
